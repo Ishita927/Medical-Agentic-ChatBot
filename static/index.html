@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedGuide AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f1f7f6; --surface:#ffffff; --ink:#0f2e2b; --muted:#566f6b; --line:#d3e3e0;
+  --brand:#0b7a6f; --brand-ink:#ffffff; --brand-soft:#e1f2ef; --alert:#a8231b; --alert-soft:#fdeceb;
+  --radius:14px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c1a19; --surface:#132523; --ink:#e3f1ee; --muted:#8fa9a5; --line:#243d3a;
+    --brand:#3cc4b3; --brand-ink:#04211e; --brand-soft:#173833; --alert:#ff9b92; --alert-soft:#35201f;
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:17px;line-height:1.55;display:flex;flex-direction:column}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+
+header{display:flex;align-items:center;gap:.75rem;padding:.8rem 1.1rem;background:var(--surface);border-bottom:1px solid var(--line)}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;flex:none}
+header h1{font-size:1.15rem;margin:0;line-height:1.2}
+header small{display:block;color:var(--muted);font-size:.8rem}
+.spacer{flex:1}
+.tool{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--line);background:transparent;border-radius:999px;padding:.4rem .8rem;font-size:.9rem}
+.tool:hover{background:var(--brand-soft)}
+.tool[aria-pressed="true"]{background:var(--brand-soft);border-color:var(--brand)}
+
+.alert{background:var(--alert-soft);color:var(--alert);padding:.5rem 1.1rem;font-size:.9rem;border-bottom:1px solid var(--line)}
+
+main{flex:1;overflow-y:auto;padding:1.2rem 1rem 0}
+#log{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:1rem;padding-bottom:1rem}
+
+.welcome{text-align:left;margin:2rem 0 1rem}
+.welcome h2{font-size:1.9rem;line-height:1.2;margin:0 0 .5rem;letter-spacing:-.01em}
+.welcome p{color:var(--muted);margin:0 0 1.2rem;max-width:55ch}
+.chips{display:flex;flex-wrap:wrap;gap:.6rem}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:.55rem 1rem;text-align:left}
+.chip:hover{border-color:var(--brand);background:var(--brand-soft)}
+
+.msg{display:flex;flex-direction:column;max-width:88%}
+.msg.user{align-self:flex-end;align-items:flex-end}
+.msg.bot{align-self:flex-start}
+.bubble{padding:.7rem 1rem;border-radius:var(--radius);overflow-wrap:anywhere}
+.user .bubble{background:var(--brand);color:var(--brand-ink);border-bottom-right-radius:4px}
+.bot .bubble{background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:4px;max-width:68ch}
+.bubble p{margin:0 0 .6em}.bubble p:last-child{margin:0}
+.bubble ul,.bubble ol{margin:.2em 0 .6em;padding-left:1.3rem}
+.bubble code{background:var(--brand-soft);padding:.05em .35em;border-radius:5px;font-size:.92em}
+.bubble.error{border-color:var(--alert);background:var(--alert-soft);color:var(--alert)}
+.thumb{max-width:200px;max-height:160px;border-radius:10px;margin-bottom:.4rem;display:block;border:1px solid var(--line)}
+.sources{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem;align-items:center;font-size:.82rem;color:var(--muted)}
+.src{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:.15rem .5rem;color:var(--ink);text-decoration:none;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+a.src:hover{border-color:var(--brand);color:var(--brand)}
+.actions{display:flex;gap:.3rem;margin-top:.35rem}
+.mini{border:none;background:transparent;color:var(--muted);font-size:.82rem;padding:.2rem .5rem;border-radius:8px;display:inline-flex;gap:.3rem;align-items:center}
+.mini:hover{background:var(--brand-soft);color:var(--ink)}
+
+.typing{display:inline-flex;gap:5px;padding:.2rem 0}
+.typing i{width:8px;height:8px;border-radius:50%;background:var(--muted);animation:b 1s infinite ease-in-out}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,80%,100%{opacity:.3;transform:translateY(0)}40%{opacity:1;transform:translateY(-4px)}}
+
+footer{background:var(--bg);padding:.6rem 1rem calc(.8rem + env(safe-area-inset-bottom,0px))}
+.composer-wrap{max-width:760px;margin:0 auto}
+#preview{display:none;align-items:center;gap:.6rem;margin-bottom:.5rem;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:.4rem .6rem}
+#preview.on{display:flex}
+#preview img{width:44px;height:44px;object-fit:cover;border-radius:8px}
+#preview span{flex:1;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.composer{display:flex;align-items:flex-end;gap:.4rem;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:.4rem}
+.composer:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+#q{flex:1;border:none;background:transparent;color:inherit;font:inherit;resize:none;max-height:160px;padding:.5rem .4rem;outline:none}
+.icon{width:42px;height:42px;border-radius:50%;border:none;background:transparent;display:grid;place-items:center;flex:none}
+.icon:hover{background:var(--brand-soft)}
+.icon.rec{background:var(--alert);color:#fff;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 8px rgba(168,35,27,.18)}}
+#send{background:var(--brand);color:var(--brand-ink)}
+#send:hover{filter:brightness(1.08)}
+#send:disabled{opacity:.45;cursor:not-allowed}
+.note{text-align:center;color:var(--muted);font-size:.78rem;margin:.5rem 0 0}
+.drop{position:fixed;inset:0;background:rgba(11,122,111,.18);border:3px dashed var(--brand);display:none;place-items:center;font-size:1.3rem;z-index:10;pointer-events:none}
+.drop.on{display:grid}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+@media (max-width:560px){.msg{max-width:96%}.tool span{display:none}.welcome h2{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" aria-hidden="true">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  </div>
+  <div><h1>MedGuide AI</h1><small>Educational medical assistant</small></div>
+  <div class="spacer"></div>
+  <button class="tool" id="voiceToggle" aria-pressed="false" title="Read answers aloud automatically">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+    <span>Read aloud</span>
+  </button>
+  <button class="tool" id="clear" title="Start a new conversation">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+    <span>New chat</span>
+  </button>
+</header>
+
+<div class="alert" role="note"><strong>Emergency?</strong> Call your local emergency number now (112 in India, 911 in the US). This assistant cannot help in an emergency.</div>
+
+<main id="scroller"><div id="log" aria-live="polite"></div></main>
+
+<footer>
+  <div class="composer-wrap">
+    <div id="preview"><img id="pimg" alt=""><span id="pname"></span><button class="mini" id="premove">Remove</button></div>
+    <div class="composer">
+      <input type="file" id="file" accept="image/*" class="sr" tabindex="-1">
+      <button class="icon" id="attach" title="Attach an image" aria-label="Attach an image">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 12-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l9-9a3.7 3.7 0 0 1 5.2 5.2l-9 9a1.8 1.8 0 0 1-2.6-2.6l8.2-8.2"/></svg>
+      </button>
+      <textarea id="q" rows="1" placeholder="Ask a medical question…" aria-label="Your question"></textarea>
+      <button class="icon" id="mic" title="Speak your question" aria-label="Speak your question">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <button class="icon" id="send" title="Send" aria-label="Send">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      </button>
+    </div>
+    <p class="note">For learning only. Not a diagnosis or medical advice. Enter to send, Shift+Enter for a new line.</p>
+  </div>
+</footer>
+<div class="drop" id="drop">Drop an image to attach it</div>
+
+<script>
+// const API_URL = "/chat";
+const API_URL = location.port === "8000" ? "/chat" : "http://127.0.0.1:8000/chat";
+const $ = s => document.querySelector(s);
+const log = $("#log"), scroller = $("#scroller"), q = $("#q"), sendBtn = $("#send");
+
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
+};
+
+let history = store.get("mg.history", []);
+let autoSpeak = store.get("mg.speak", false);
+let attached = null;       // File
+let busy = false;
+let lastPayload = null;    // for retry
+
+const SUGGESTIONS = [
+  "What is an abscess?",
+  "What are the symptoms of anemia?",
+  "How is asthma treated?",
+  "What is the latest treatment for long COVID?"
+];
+
+/* ---------- rendering helpers ---------- */
+function md(text){
+  const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const inl = s => esc(s).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/`(.+?)`/g,"<code>$1</code>");
+  const out = []; let list = null;
+  const close = () => { if(list){ out.push(`</${list}>`); list = null; } };
+  for(const line of text.split("\n")){
+    let m;
+    if((m = line.match(/^#{1,6}\s+(.*)/))){ close(); out.push(`<p><strong>${inl(m[1])}</strong></p>`); }
+    else if((m = line.match(/^\s*[-*•]\s+(.*)/))){ if(list !== "ul"){ close(); out.push("<ul>"); list = "ul"; } out.push(`<li>${inl(m[1])}</li>`); }
+    else if((m = line.match(/^\s*\d+[.)]\s+(.*)/))){ if(list !== "ol"){ close(); out.push("<ol>"); list = "ol"; } out.push(`<li>${inl(m[1])}</li>`); }
+    else if(!line.trim()) close();
+    else { close(); out.push(`<p>${inl(line)}</p>`); }
+  }
+  close(); return out.join("");
+}
+const plain = t => t.replace(/[*#`]/g,"").replace(/\s+/g," ").trim();
+const el = (tag, cls, html) => { const e = document.createElement(tag); if(cls) e.className = cls; if(html != null) e.innerHTML = html; return e; };
+const icon = {
+  speak: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>',
+  copy: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
+  retry: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></svg>'
+};
+
+function renderMessage(m){
+  const wrap = el("div", `msg ${m.role}`);
+  const bubble = el("div", "bubble" + (m.error ? " error" : ""));
+  if(m.image){ const t = el("div", "", ""); t.textContent = ""; bubble.appendChild(m.thumb ? Object.assign(el("img","thumb"),{src:m.thumb,alt:"Attached image"}) : el("p","", "<em>[image attached]</em>")); }
+  if(m.role === "bot" && !m.error) bubble.insertAdjacentHTML("beforeend", md(m.text));
+  else bubble.insertAdjacentHTML("beforeend", md(m.text));
+  wrap.appendChild(bubble);
+
+  if(m.sources && m.sources.length){
+    // const s = el("div","sources","Sources:");
+    const label = m.route === "web" ? "From web search" : "From encyclopedia";
+    const s = el("div","sources", label + " · Sources:");
+    m.sources.forEach(src => {
+      const isUrl = /^https?:\/\//i.test(src);
+      const n = el(isUrl ? "a" : "span", "src");
+      n.textContent = isUrl ? src.replace(/^https?:\/\/(www\.)?/,"") : src;
+      n.title = src;
+      if(isUrl){ n.href = src; n.target = "_blank"; n.rel = "noopener noreferrer"; }
+      s.appendChild(n);
+    });
+    wrap.appendChild(s);
+  }
+  if(m.role === "bot"){
+    const a = el("div","actions");
+    if(m.error){
+      const r = el("button","mini",icon.retry + " Retry"); r.onclick = () => retry(m); a.appendChild(r);
+    }else{
+      const sp = el("button","mini",icon.speak + " Listen"); sp.onclick = () => toggleSpeak(m.text, sp); a.appendChild(sp);
+      const cp = el("button","mini",icon.copy + " Copy");
+      cp.onclick = async () => { try{ await navigator.clipboard.writeText(m.text); cp.innerHTML = icon.copy + " Copied"; setTimeout(()=>cp.innerHTML = icon.copy + " Copy",1500);}catch{} };
+      a.appendChild(cp);
+    }
+    wrap.appendChild(a);
+  }
+  return wrap;
+}
+
+function scrollDown(){ scroller.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" }); }
+
+function renderAll(){
+  log.innerHTML = "";
+  if(!history.length){
+    const w = el("div","welcome");
+    w.innerHTML = "<h2>Ask a health question, in your own words.</h2><p>Answers come from a medical encyclopedia, with a web search as backup. You can type, speak, or attach a photo.</p>";
+    const c = el("div","chips");
+    SUGGESTIONS.forEach(t => { const b = el("button","chip"); b.textContent = t; b.onclick = () => { q.value = t; send(); }; c.appendChild(b); });
+    w.appendChild(c); log.appendChild(w);
+  }else{
+    history.forEach(m => log.appendChild(renderMessage(m)));
+  }
+  scrollDown();
+}
+
+function persist(){
+  store.set("mg.history", history.slice(-60).map(({thumb, ...rest}) => rest));
+}
+
+/* ---------- sending ---------- */
+function setBusy(b){ busy = b; sendBtn.disabled = b; }
+
+function showTyping(){
+  const w = el("div","msg bot"); w.id = "typing";
+  w.appendChild(el("div","bubble",'<span class="typing" role="status" aria-label="MedGuide is thinking"><i></i><i></i><i></i></span>'));
+  log.appendChild(w); scrollDown();
+}
+const hideTyping = () => { const t = $("#typing"); if(t) t.remove(); };
+
+async function send(){
+  const text = q.value.trim();
+  if(!text || busy) return;
+  const file = attached;
+  history.push({ role:"user", text, image: !!file, thumb: file ? URL.createObjectURL(file) : null });
+  lastPayload = { text, file };
+  q.value = ""; autoGrow(); clearAttachment();
+  renderAll(); persist();
+  await ask(text, file);
+}
+
+async function ask(text, file){
+  setBusy(true); showTyping();
+  try{
+    const fd = new FormData();
+    fd.append("question", text);
+    if(file) fd.append("image", file);
+    const r = await fetch(API_URL, { method:"POST", body: fd });
+    if(!r.ok) throw new Error(`Server returned ${r.status}`);
+    const d = await r.json();
+    hideTyping();
+    history.push({ role:"bot", text: d.answer || "No answer was returned.", sources: d.sources || [], route: d.route});
+    renderAll(); persist();
+    if(autoSpeak) speak(d.answer);
+  }catch(err){
+    hideTyping();
+    history.push({ role:"bot", error:true, text:"The assistant could not answer. Check that the server is running and your API keys are set in .env, then retry. (" + err.message + ")" });
+    renderAll();
+  }finally{ setBusy(false); q.focus(); }
+}
+
+function retry(m){
+  history = history.filter(x => x !== m);
+  renderAll();
+  if(lastPayload) ask(lastPayload.text, lastPayload.file);
+}
+
+/* ---------- input behaviour ---------- */
+function autoGrow(){ q.style.height = "auto"; q.style.height = Math.min(q.scrollHeight,160) + "px"; }
+q.addEventListener("input", autoGrow);
+q.addEventListener("keydown", e => { if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); } });
+sendBtn.onclick = send;
+
+$("#clear").onclick = () => {
+  if(history.length && !confirm("Clear this conversation?")) return;
+  history = []; lastPayload = null; speechSynthesis.cancel(); persist(); renderAll();
+};
+
+/* ---------- image attach: button, paste, drag and drop ---------- */
+function setAttachment(f){
+  if(!f || !f.type.startsWith("image/")) return;
+  if(f.size > 8 * 1024 * 1024){ alert("Image is larger than 8 MB. Choose a smaller one."); return; }
+  attached = f;
+  $("#pimg").src = URL.createObjectURL(f);
+  $("#pname").textContent = f.name || "Pasted image";
+  $("#preview").classList.add("on");
+}
+function clearAttachment(){ attached = null; $("#file").value = ""; $("#preview").classList.remove("on"); }
+$("#attach").onclick = () => $("#file").click();
+$("#file").onchange = e => setAttachment(e.target.files[0]);
+$("#premove").onclick = clearAttachment;
+q.addEventListener("paste", e => {
+  const item = [...e.clipboardData.items].find(i => i.type.startsWith("image/"));
+  if(item){ e.preventDefault(); setAttachment(item.getAsFile()); }
+});
+let dragDepth = 0;
+addEventListener("dragenter", e => { e.preventDefault(); dragDepth++; $("#drop").classList.add("on"); });
+addEventListener("dragleave", () => { if(--dragDepth <= 0){ dragDepth = 0; $("#drop").classList.remove("on"); } });
+addEventListener("dragover", e => e.preventDefault());
+addEventListener("drop", e => { e.preventDefault(); dragDepth = 0; $("#drop").classList.remove("on"); setAttachment(e.dataTransfer.files[0]); });
+
+/* ---------- voice output ---------- */
+let speakingBtn = null;
+function speak(text){
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(plain(text));
+  u.rate = 1;
+  u.onend = u.onerror = () => { if(speakingBtn){ speakingBtn.innerHTML = icon.speak + " Listen"; speakingBtn = null; } };
+  speechSynthesis.speak(u);
+}
+function toggleSpeak(text, btn){
+  if(speakingBtn === btn){ speechSynthesis.cancel(); return; }
+  if(speakingBtn) speakingBtn.innerHTML = icon.speak + " Listen";
+  speak(text); speakingBtn = btn; btn.innerHTML = icon.speak + " Stop";
+}
+const vt = $("#voiceToggle");
+function paintVoice(){ vt.setAttribute("aria-pressed", autoSpeak); }
+vt.onclick = () => { autoSpeak = !autoSpeak; store.set("mg.speak", autoSpeak); if(!autoSpeak) speechSynthesis.cancel(); paintVoice(); };
+paintVoice();
+
+/* ---------- voice input ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const mic = $("#mic"); let rec = null;
+mic.onclick = () => {
+  if(!SR){ alert("Speech input is not supported in this browser. Use Chrome or Edge."); return; }
+  if(rec){ rec.stop(); return; }
+  rec = new SR(); rec.lang = navigator.language || "en-US"; rec.interimResults = true;
+  let finalText = "";
+  rec.onstart = () => { mic.classList.add("rec"); q.placeholder = "Listening…"; };
+  rec.onresult = e => {
+    let interim = "";
+    for(const r of e.results){ if(r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript; }
+    q.value = finalText + interim; autoGrow();
+  };
+  rec.onerror = e => { if(e.error === "not-allowed") alert("Microphone access was blocked. Allow it in your browser’s site settings."); };
+  rec.onend = () => {
+    mic.classList.remove("rec"); q.placeholder = "Ask a medical question…"; rec = null;
+    if(q.value.trim()) send();
+  };
+  rec.start();
+};
+
+renderAll();
+q.focus();
+</script>
+</body>
+</html>
